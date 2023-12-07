@@ -4,6 +4,10 @@ This project is a test of embedding a React component in a vanilla JS website.
 
 *Inspiration: https://www.learningsomethingnew.com/embed-react-in-vanilla-js-website*
 
+## Demo
+
+![Showcase](misc/Showcase.gif)
+
 ## Features
 
 - append a React component to a DOM element
@@ -38,9 +42,7 @@ Update the path in [vanilla-website/index.html](vanilla-website/index.html) to t
 - `ReactDOM` require a root element. In order to not lose the children of the element, a `span` is created and used as root.
 - the library [vite-plugin-dts](https://github.com/qmhc/vite-plugin-dts) is used to generate the `.d.ts` file.
 
-## Example
-
-![Showcase](misc/Showcase.gif)
+## Code
 
 <details>
 <summary>Show React Code</summary>
