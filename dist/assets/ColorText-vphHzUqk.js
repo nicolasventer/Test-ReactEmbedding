@@ -1,0 +1,1 @@
+import{r as o,R as n,j as r}from"./index-QXdAMub6.js";const c=e=>{const[t,s]=o.useState("");return n.useEffect(()=>{var a,x;e.state.text=t,e.state.setText=s,(x=(a=e.state).onTextChange)==null||x.call(a,t)},[e.state,t]),r.jsx("input",{style:{color:t},type:"text",value:t,onChange:a=>s(a.target.value)})};export{c as ColorText};
