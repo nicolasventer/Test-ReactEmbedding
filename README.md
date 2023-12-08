@@ -49,7 +49,7 @@ Update the path in [vanilla-website/index.html](vanilla-website/index.html) to t
 
 Content of [src/Counter.tsx](src/Counter.tsx):
 
-```ts
+```tsx
 import React, { useState } from "react";
 
 export type CounterProps = { count: number; setCount: (count: number) => void; onCountChange?: (count: number) => void };
@@ -67,7 +67,7 @@ export const Counter = (props: { state: CounterProps }) => {
 
 Content of [src/ColorText.tsx](src/ColorText.tsx):
 
-```ts
+```tsx
 import React, { useState } from "react";
 
 export type ColorTextProps = { text: string; setText: (text: string) => void; onTextChange?: (text: string) => void };
@@ -85,7 +85,7 @@ export const ColorText = (props: { state: ColorTextProps }) => {
 
 Content of [src/main.tsx](src/main.tsx):
 
-```ts
+```tsx
 import React from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
