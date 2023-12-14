@@ -1,4 +1,6 @@
+/// <reference types="react" />
 export type ColorTextProps = {
+    ref: React.RefObject<HTMLInputElement>;
     text: string;
     setText: (text: string) => void;
     onTextChange?: (text: string) => void;

@@ -5,7 +5,7 @@
 /// <reference path="../dist/main.d.ts" />
 
 // get functions defined in the react app
-const { appendCounter, textComponent } = window;
+const { appendCounter, appendColorText } = window;
 
 // get html elements
 const countersEl = document.getElementById("counters");
@@ -25,8 +25,11 @@ resetCountersButton.addEventListener("click", () => counterStates.forEach((count
 counterStates.push(appendCounter(countersEl));
 
 // add sample text component
-const { st, el } = textComponent();
-document.body.appendChild(el);
+const st = /** @type {import("../dist/ColorText").ColorTextProps} */ ({ text: "Hello World!" });
+appendColorText(document.body, st); // Careful append not immediately done
 const text = document.createTextNode("");
 document.body.appendChild(text);
-st.onTextChange = (newText) => (text.nodeValue = newText); // update text node when text changes
+st.onTextChange = (newText) => {
+	text.nodeValue = newText; // update text node when text changes
+	if (newText === "delete") st.ref.current?.remove(); // just showing how to get dom element
+};

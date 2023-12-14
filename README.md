@@ -12,6 +12,7 @@ This project is a test of embedding a React component in a vanilla JS website.
 
 - append a React component to a DOM element
 - get and set state of React component
+- pass parameters to React component
 - lazy export of React component
 - support for TypeScript and JavaScript with `@ts-check`
 - export CSS
@@ -39,7 +40,8 @@ Update the path in [vanilla-website/index.html](vanilla-website/index.html) to t
 
 ## Some info
 
-- `ReactDOM` require a root element. In order to not lose the children of the element, a `span` is created and used as root.
+- `ReactDOM` require a root element. That's why we can only append components to a specified DOM element.  
+  BE CAREFUL: the append not immediately done.
 - the library [vite-plugin-dts](https://github.com/qmhc/vite-plugin-dts) is used to generate the `.d.ts` file.
 
 ## Code
@@ -50,17 +52,19 @@ Update the path in [vanilla-website/index.html](vanilla-website/index.html) to t
 Content of [src/Counter.tsx](src/Counter.tsx):
 
 ```tsx
-import React, { useState } from "react";
+import { useEffect, useState } from "react";
 
 export type CounterProps = { count: number; setCount: (count: number) => void; onCountChange?: (count: number) => void };
 
 export const Counter = (props: { state: CounterProps }) => {
 	const [count, setCount] = useState(0);
-	React.useEffect(() => {
+
+	useEffect(() => {
 		props.state.count = count;
 		props.state.setCount = setCount;
-		props.state.onCountChange?.(count);
 	}, [props.state, count]);
+	useEffect(() => props.state.onCountChange?.(count), [props.state, count]);
+
 	return <button onClick={() => setCount(count + 1)}>count is {count}</button>;
 };
 ```
@@ -68,66 +72,81 @@ export const Counter = (props: { state: CounterProps }) => {
 Content of [src/ColorText.tsx](src/ColorText.tsx):
 
 ```tsx
-import React, { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-export type ColorTextProps = { text: string; setText: (text: string) => void; onTextChange?: (text: string) => void };
+export type ColorTextProps = {
+	ref: React.RefObject<HTMLInputElement>; // ref is not mandatory, be aware that this is the only way to get the DOM element
+	text: string;
+	setText: (text: string) => void;
+	onTextChange?: (text: string) => void;
+};
 
 export const ColorText = (props: { state: ColorTextProps }) => {
-	const [text, setText] = useState("");
-	React.useEffect(() => {
+	const [text, setText] = useState(props.state.text ?? "");
+	const ref = useRef<HTMLInputElement>(null);
+	useEffect(() => {
 		props.state.text = text;
 		props.state.setText = setText;
-		props.state.onTextChange?.(text);
+		props.state.ref = ref;
 	}, [props.state, text]);
-	return <input style={{ color: text }} type="text" value={text} onChange={(e) => setText(e.target.value)} />;
+	useEffect(() => props.state.onTextChange?.(text), [props.state, text]);
+	return <input ref={ref} style={{ color: text }} type="text" value={text} onChange={(e) => setText(e.target.value)} />;
 };
 ```
 
 Content of [src/main.tsx](src/main.tsx):
 
 ```tsx
-import React from "react";
-import ReactDOM from "react-dom/client";
-import "./index.css";
-import { Counter, CounterProps } from "./Counter";
+import { StrictMode, Suspense, lazy } from "react";
+import { createPortal } from "react-dom";
+import { createRoot } from "react-dom/client";
 import { ColorTextProps } from "./ColorText";
+import { Counter, CounterProps } from "./Counter";
+import "./index.css";
 
 declare global {
 	interface Window {
-		appendCounter: (el: HTMLElement) => CounterProps;
-		textComponent: () => { el: HTMLElement; st: ColorTextProps };
+		appendCounter: (el: HTMLElement, props?: CounterProps) => CounterProps;
+		appendColorText: (el: HTMLElement, props?: ColorTextProps) => ColorTextProps;
 	}
 }
 
-window.appendCounter = (el: HTMLElement) => {
-	// uncomment for lazy loading
-	// const Counter = React.lazy(() => import("./Counter").then((module) => ({ default: module.Counter })));
-	const child = document.createElement("span");
-	const root = ReactDOM.createRoot(child);
-	const state = {} as CounterProps; // state initialized in Counter
-	root.render(
-		<React.StrictMode>
-			{/* React.Suspense now not needed since lazy loading is commented out */}
-			<Counter state={state} />
-		</React.StrictMode>
-	);
-	el.appendChild(child);
-	return state;
+/* Unfortunately, function below does not work.
+const GetAppendFn =
+	<T,>(component: (props: { state: T }) => React.ReactNode) =>
+	(el: HTMLElement, props: T = {} as T) => {
+		const child = document.createElement("span"); // whatever, since not rendered
+		const root = createRoot(child);
+		root.render(<StrictMode>{createPortal(component({ state: props }), el)}</StrictMode>);
+		return props;
+	};
+*/
+
+window.appendCounter = (el: HTMLElement, props: CounterProps = {} as CounterProps) => {
+	const child = document.createElement("span"); // whatever, since not rendered
+	const root = createRoot(child);
+	root.render(<StrictMode>{createPortal(<Counter state={props} />, el)}</StrictMode>);
+	return props;
 };
 
-window.textComponent = () => {
-	const ColorText = React.lazy(() => import("./ColorText").then((module) => ({ default: module.ColorText })));
-	const el = document.createElement("span");
-	const st = {} as ColorTextProps; // state initialized in ColorText
-	const root = ReactDOM.createRoot(el);
+// eslint-disable-next-line react-refresh/only-export-components
+const ColorText = lazy(() => import("./ColorText").then((module) => ({ default: module.ColorText })));
+
+// lazy loading example
+window.appendColorText = (el: HTMLElement, props: ColorTextProps = {} as ColorTextProps) => {
+	const child = document.createElement("span"); // whatever, since not rendered
+	const root = createRoot(child);
 	root.render(
-		<React.StrictMode>
-			<React.Suspense>
-				<ColorText state={st} />
-			</React.Suspense>
-		</React.StrictMode>
+		<StrictMode>
+			{createPortal(
+				<Suspense>
+					<ColorText state={props} />
+				</Suspense>,
+				el
+			)}
+		</StrictMode>
 	);
-	return { el, st };
+	return props;
 };
 ```
 
@@ -143,7 +162,7 @@ Content of [vanilla-website/vanillaIndex.js](vanilla-website/vanillaIndex.js):
 /// <reference path="../dist/main.d.ts" />
 
 // get functions defined in the react app
-const { appendCounter, textComponent } = window;
+const { appendCounter, appendColorText } = window;
 
 // get html elements
 const countersEl = document.getElementById("counters");
@@ -163,9 +182,12 @@ resetCountersButton.addEventListener("click", () => counterStates.forEach((count
 counterStates.push(appendCounter(countersEl));
 
 // add sample text component
-const { st, el } = textComponent();
-document.body.appendChild(el);
+const st = /** @type {import("../dist/ColorText").ColorTextProps} */ ({ text: "Hello World!" });
+appendColorText(document.body, st); // Careful append not immediately done
 const text = document.createTextNode("");
 document.body.appendChild(text);
-st.onTextChange = (newText) => (text.nodeValue = newText); // update text node when text changes
+st.onTextChange = (newText) => {
+	text.nodeValue = newText; // update text node when text changes
+	if (newText === "delete") st.ref.current?.remove(); // just showing how to get dom element
+};
 ```
